@@ -244,10 +244,21 @@ header { flex-direction: column; align-items: flex-start; gap: 12px; }
 <div class="modal-overlay" id="config-modal">
 <div class="config-modal">
 <h2>חיבור ל-Google Sheets</h2>
-<p style="color: var(--text-dim); font-size: 14px;">הדבק את ה-CSV URL מהגיליון שפרסמת ב-Google Sheets.</p>
-<label>CSV URL מ-Google Sheets:</label>
-<input type="text" id="sheet-url-input" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
-<div class="help">קובץ → שתף → פרסם באינטרנט → גיליון ראשון → CSV → פרסם → העתק את הקישור</div>
+<p style="color: var(--text-dim); font-size: 14px; line-height: 1.6;">
+הדשבורד מחובר לגיליון שלך ישירות.<br>
+כדי שזה יעבד, הגיליון חייב להיות <strong style="color:var(--accent)">נגיש לכל מי שיש לו קישור</strong>:
+</p>
+<p style="color: var(--text-faint); font-size: 13px; margin-top: 12px; line-height: 1.7;">
+① פתח את הגיליון ב-Google Sheets<br>
+② לחץ "שתף" (כפתור ירוק, למעלה מימין)<br>
+③ לחץ "שנה ל: כל מי שיש לו קישור"<br>
+④ ודא שההרשאה היא "צופה"<br>
+⑤ שמור ורענן את הדשבורד
+</p>
+<p style="color: var(--text-faint); font-size: 12px; margin-top: 14px;">אם הגיליון שלך שונה, הדבק כאן URL חלופי:</p>
+<label>CSV URL מ-Google Sheets (אופציונלי):</label>
+<input type="text" id="sheet-url-input" placeholder="https://docs.google.com/spreadsheets/d/...">
+<div class="help">אפשרויות: קובץ → שתף → פרסם באינטרנט → גיליון → CSV → פרסם → העתק קישור</div>
 <button class="primary" onclick="saveConfig()">שמור והתחל</button>
 </div>
 </div>
@@ -260,7 +271,9 @@ header { flex-direction: column; align-items: flex-start; gap: 12px; }
 </div>
 
 <script>
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTl88ii6BzSTGECq4CIo9jzUO5TWsTk3krCK_s6jvgYVTGxHjgOLOL8zgVzNt8vVA/pub?output=csv";
+// Direct export URL — works as long as the sheet is shared "Anyone with link → Viewer"
+// Sheet ID: 18VS0TyOSs-QduatiRR8P0msRGc8FyLfY | Tab gid: 347543099
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/18VS0TyOSs-QduatiRR8P0msRGc8FyLfY/export?format=csv&gid=347543099";
 
 const TODAY = new Date();
 const HEB_MONTHS = ['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'];
@@ -365,14 +378,20 @@ return 'future';
 }
 
 async function loadData(force = false) {
-let url = SHEET_CSV_URL || localStorage.getItem('sheet_url');
+let url = localStorage.getItem('sheet_url') || SHEET_CSV_URL;
 if (!url) { document.getElementById('config-modal').classList.add('open'); return; }
 if (force) { url = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); }
 document.getElementById('main-content').innerHTML = `<div class="loading"><div class="spinner"></div><div>טוען נתונים מ-Google Sheets...</div></div>`;
 try {
 const res = await fetch(url);
+if (res.status === 401 || res.status === 403) {
+throw new Error('הגיליון לא נגיש. יש לשתף אותו: "שתף" → "כל מי שיש לו קישור" → "צופה"');
+}
 if (!res.ok) throw new Error('HTTP ' + res.status);
 const text = await res.text();
+if (text.trim().startsWith('<!')) {
+throw new Error('הגיליון לא נגיש ציבורית. יש לשתף: לחץ "שתף" → "כל מי שיש לו קישור" → "צופה", ואז לרענן');
+}
 const rows = parseCSV(text);
 PROJECTS = parseProjects(rows);
 if (PROJECTS.length === 0) throw new Error('לא נמצאו פרויקטים. בדוק שמבנה הגיליון תקין.');
@@ -380,7 +399,7 @@ renderAll();
 const now = new Date();
 document.getElementById('data-source').innerHTML = `עודכן לאחרונה: ${now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`;
 } catch (err) {
-document.getElementById('main-content').innerHTML = `<div class="error-banner"><strong>שגיאה בטעינת הנתונים:</strong> ${err.message}<br><span style="font-size: 12px;">בדוק שה-CSV URL נכון ושהגיליון מפורסם כציבורי.</span><br><br><button class="refresh-btn" onclick="resetConfig()">החלף URL</button></div>`;
+document.getElementById('main-content').innerHTML = `<div class="error-banner"><strong>שגיאה בטעינת הנתונים:</strong> ${err.message}<br><br><button class="refresh-btn" onclick="loadData(true)">נסה שוב</button> &nbsp; <button class="refresh-btn" onclick="resetConfig()">הגדר URL אחר</button></div>`;
 }
 }
 
