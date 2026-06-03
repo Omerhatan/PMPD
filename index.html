@@ -341,21 +341,35 @@ if (cell !== '' || row.length > 0) { row.push(cell); rows.push(row); }
 return rows;
 }
 
+function monthLookup(raw) {
+const clean = raw.replace(/[׳']/g, '').trim();
+let idx = HEB_MONTHS.indexOf(clean);
+if (idx !== -1) return idx;
+idx = HEB_MONTHS_FULL.indexOf(clean);
+if (idx !== -1) return idx;
+for (let i = 0; i < HEB_MONTHS.length; i++) {
+if (clean.startsWith(HEB_MONTHS[i]) || HEB_MONTHS_FULL[i].startsWith(clean)) return i;
+}
+return -1;
+}
+
 function parseDate(s) {
 if (!s) return null;
 s = s.trim();
-if (!s) return null;
+if (!s || s === '-' || s === '—') return null;
 if (s === 'בוצע' || s === 'הושלם' || s === 'התקבל') return { type: 'done', label: s };
 if (s === 'לא יבוצע' || s === 'לא נדרש') return { type: 'na', label: s };
 if (s === 'טרם התקבל' || s === 'תתקבל החלטה') return { type: 'pending', label: s };
-const dmyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-if (dmyMatch) {
-const d = new Date(parseInt(dmyMatch[3]), parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]));
+// Google Sheets exports dates as m/d/yyyy
+const mdyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+if (mdyMatch) {
+const d = new Date(parseInt(mdyMatch[3]), parseInt(mdyMatch[1]) - 1, parseInt(mdyMatch[2]));
 return { type: 'date', date: d, label: s };
 }
-const monthMatch = s.match(/^(\S+?)(\d{2})-?$/);
+// Month-year: "מאי-26", "ספט׳-25", "יולי-26"
+const monthMatch = s.match(/^([^\d\-]+?)-(\d{2})$/);
 if (monthMatch) {
-const monthIdx = HEB_MONTHS.indexOf(monthMatch[1]);
+const monthIdx = monthLookup(monthMatch[1]);
 if (monthIdx !== -1) {
 const year = 2000 + parseInt(monthMatch[2]);
 const d = new Date(year, monthIdx, 15);
@@ -413,22 +427,28 @@ document.getElementById('main-content').innerHTML = `<div class="error-banner"><
 }
 }
 
+// Actual CSV column layout (verified from exported data):
+// col 0: empty | col 1: project# | col 2: name | col 3: architect | col 4: units | col 5: type
+// col 6: project-initiation (skip) | col 7: separator
+// Planning cols: 8,9,10,11,12 | separator: 13
+// Licensing cols: 14,15,16,17,18,19,20,21 | separator: 22
+// Marketing cols: 23,24,25,26
+const MILESTONE_COLS = [8,9,10,11,12, 14,15,16,17,18,19,20,21, 23,24,25,26];
+
 function parseProjects(rows) {
 const projects = [];
 for (let i = 0; i < rows.length; i++) {
 const row = rows[i];
-if (!row || row.length < 5) continue;
-const id = parseInt(row[0]);
+if (!row || row.length < 10) continue;
+const id = parseInt(row[1]);
 if (isNaN(id)) continue;
-const name = row[1]?.trim() || '';
-const architect = row[2]?.trim() || '';
-const units = parseInt(row[3]) || 0;
-const type = row[4]?.trim() || '';
+const name = row[2]?.trim() || '';
+const architect = row[3]?.trim() || '';
+const units = parseInt(row[4]) || 0;
+const type = row[5]?.trim() || '';
 if (!name) continue;
-const dates = [];
-for (let j = 0; j < 17; j++) { dates.push((row[5 + j] || '').trim()); }
 const milestones = TASKS.map((t, idx) => {
-const raw = dates[idx] || '';
+const raw = (row[MILESTONE_COLS[idx]] || '').trim();
 const parsed = parseDate(raw);
 return { ...t, raw, parsed, status: dateStatus(parsed) };
 });
