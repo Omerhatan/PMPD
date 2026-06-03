@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<base target="_top">
+<link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Alef', sans-serif;
+  background: #F6F7FB;
+  padding: 24px;
+  font-size: 14px;
+  color: #1F2033;
+}
+h2 { font-size: 19px; font-weight: 700; margin-bottom: 6px; }
+.sub { font-size: 13px; color: #6B6F8C; margin-bottom: 22px; }
+.field { margin-bottom: 14px; }
+label {
+  display: block; font-size: 12px; font-weight: 700;
+  color: #6B6F8C; margin-bottom: 5px; letter-spacing: 0.03em;
+}
+input, select {
+  width: 100%; padding: 10px 12px;
+  border: 1.5px solid #E0E2EA; border-radius: 8px;
+  font-family: 'Alef', sans-serif; font-size: 14px;
+  background: #fff; color: #1F2033;
+  transition: border-color 0.15s;
+  direction: rtl;
+}
+input:focus, select:focus { outline: none; border-color: #0073EA; }
+input.error { border-color: #E2445C; }
+.error-msg { font-size: 11px; color: #E2445C; margin-top: 4px; font-weight: 700; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.divider {
+  border: none; border-top: 1px solid #E0E2EA;
+  margin: 20px 0;
+}
+.section-label {
+  font-size: 11px; font-weight: 700; color: #A8ACBF;
+  letter-spacing: 0.08em; margin-bottom: 12px;
+}
+.btn-row { display: flex; gap: 10px; margin-top: 22px; }
+.btn-primary {
+  background: #0073EA; color: #fff; border: none;
+  padding: 11px 0; border-radius: 8px;
+  font-family: 'Alef', sans-serif; font-weight: 700;
+  font-size: 14px; cursor: pointer; flex: 1;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #0060C2; }
+.btn-primary:disabled { background: #C5C7D0; cursor: not-allowed; }
+.btn-cancel {
+  background: #F0F1F5; color: #6B6F8C; border: none;
+  padding: 11px 18px; border-radius: 8px;
+  font-family: 'Alef', sans-serif; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+}
+.btn-cancel:hover { background: #E0E2EA; }
+.loading {
+  text-align: center; padding: 30px;
+  color: #6B6F8C; font-weight: 700; display: none;
+}
+.spinner {
+  display: inline-block; width: 28px; height: 28px;
+  border: 3px solid #E0E2EA; border-top-color: #0073EA;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+  margin-bottom: 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.success-box {
+  background: #E7FAF3; border: 1px solid #B3EDD8;
+  border-radius: 10px; padding: 20px; text-align: center;
+  display: none;
+}
+.success-box .icon { font-size: 36px; margin-bottom: 10px; }
+.success-box .title { font-size: 16px; font-weight: 700; color: #007A47; }
+.success-box .detail { font-size: 13px; color: #6B6F8C; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div id="form-area">
+  <h2>פרויקט חדש</h2>
+  <p class="sub">מלא את הפרטים — השורה תתווסף אוטומטית לגיליון</p>
+
+  <div class="field">
+    <label>שם הפרויקט *</label>
+    <input type="text" id="name" placeholder="לדוגמה: נהריה מ.5" autocomplete="off">
+    <div class="error-msg" id="name-err"></div>
+  </div>
+
+  <div class="field">
+    <label>אדריכל / משרד</label>
+    <input type="text" id="architect" placeholder="שם משרד האדריכלים" autocomplete="off">
+  </div>
+
+  <div class="row2">
+    <div class="field">
+      <label>כמות יח"ד *</label>
+      <input type="number" id="units" placeholder="0" min="1" max="5000">
+      <div class="error-msg" id="units-err"></div>
+    </div>
+    <div class="field">
+      <label>סוג פרויקט</label>
+      <select id="type">
+        <option value="רכישת קרקע">רכישת קרקע</option>
+        <option value="התחדשות עירונית">התחדשות עירונית</option>
+        <option value="קומבינציה">קומבינציה</option>
+        <option value="אחר">אחר</option>
+      </select>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <div class="section-label">אבני דרך — ניתן לעדכן בגיליון לאחר הוספה</div>
+
+  <div class="btn-row">
+    <button class="btn-primary" id="submit-btn" onclick="submit()">➕ הוסף לגיליון</button>
+    <button class="btn-cancel" onclick="google.script.host.close()">ביטול</button>
+  </div>
+</div>
+
+<div class="loading" id="loading-area">
+  <div class="spinner"></div>
+  <div>מוסיף פרויקט...</div>
+</div>
+
+<div class="success-box" id="success-area">
+  <div class="icon">✅</div>
+  <div class="title" id="success-title">הפרויקט נוסף!</div>
+  <div class="detail" id="success-detail"></div>
+  <div class="btn-row" style="margin-top:18px">
+    <button class="btn-primary" onclick="reset()">הוסף פרויקט נוסף</button>
+    <button class="btn-cancel" onclick="google.script.host.close()">סגור</button>
+  </div>
+</div>
+
+<script>
+function submit() {
+  // ניקוי שגיאות
+  document.getElementById('name-err').textContent = '';
+  document.getElementById('units-err').textContent = '';
+  document.getElementById('name').classList.remove('error');
+  document.getElementById('units').classList.remove('error');
+
+  var name  = document.getElementById('name').value.trim();
+  var units = parseInt(document.getElementById('units').value);
+  var valid = true;
+
+  if (!name) {
+    document.getElementById('name-err').textContent = 'שדה חובה';
+    document.getElementById('name').classList.add('error');
+    valid = false;
+  }
+  if (!units || units < 1) {
+    document.getElementById('units-err').textContent = 'הזן מספר חיובי';
+    document.getElementById('units').classList.add('error');
+    valid = false;
+  }
+  if (!valid) return;
+
+  var data = {
+    name:      name,
+    architect: document.getElementById('architect').value.trim(),
+    units:     units,
+    type:      document.getElementById('type').value
+  };
+
+  document.getElementById('form-area').style.display   = 'none';
+  document.getElementById('loading-area').style.display = 'block';
+  document.getElementById('submit-btn').disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      document.getElementById('loading-area').style.display  = 'none';
+      document.getElementById('success-area').style.display  = 'block';
+      document.getElementById('success-title').textContent   = name + ' נוסף בהצלחה!';
+      document.getElementById('success-detail').textContent  = 'פרויקט מספר ' + res.id + ' · שורה ' + res.row + ' בגיליון';
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('loading-area').style.display = 'none';
+      document.getElementById('form-area').style.display    = 'block';
+      document.getElementById('submit-btn').disabled = false;
+      alert('שגיאה: ' + err.message);
+    })
+    .addNewProject(data);
+}
+
+function reset() {
+  document.getElementById('name').value      = '';
+  document.getElementById('architect').value = '';
+  document.getElementById('units').value     = '';
+  document.getElementById('success-area').style.display = 'none';
+  document.getElementById('form-area').style.display    = 'block';
+  document.getElementById('submit-btn').disabled = false;
+}
+</script>
+</body>
+</html>
