@@ -402,7 +402,7 @@ return 'future';
 }
 
 async function loadData(force = false) {
-let url = localStorage.getItem('sheet_url') || SHEET_CSV_URL;
+let url = SHEET_CSV_URL || localStorage.getItem('sheet_url');
 if (!url) { document.getElementById('config-modal').classList.add('open'); return; }
 if (force) { url = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); }
 document.getElementById('main-content').innerHTML = `<div class="loading"><div class="spinner"></div><div>טוען נתונים מ-Google Sheets...</div></div>`;
@@ -654,6 +654,8 @@ renderProjects();
 document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
+// Clear any stale stored URL — the hardcoded SHEET_CSV_URL is always authoritative
+localStorage.removeItem('sheet_url');
 loadData();
 </script>
 
