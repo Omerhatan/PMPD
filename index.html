@@ -502,15 +502,38 @@ document.getElementById('main-content').innerHTML = `<div class="error-banner"><
 }
 }
 
-// Actual CSV column layout (verified from exported data):
+// Hardcoded fallback column indices (0-based):
 // col 0: empty | col 1: project# | col 2: name | col 3: architect | col 4: units | col 5: type
-// col 6: project-initiation (skip) | col 7: separator
-// Planning cols: 8,9,10,11,12 | separator: 13
-// Licensing cols: 14,15,16,17,18,19,20,21 | separator: 22
-// Marketing cols: 23,24,25,26
-const MILESTONE_COLS = [8,9,10,11,12, 14,15,16,17,18,19,20,21, 23,24,25,26];
+// Planning: 8-12 | sep: 13 | Licensing: 14-21 | sep: 22 | Marketing: 23-26
+const MILESTONE_COLS_FALLBACK = [8,9,10,11,12, 14,15,16,17,18,19,20,21, 23,24,25,26];
+
+// Try to detect milestone column indices from header rows.
+// Looks at first 4 rows; if a row contains ≥70% of task names → use it.
+// Returns array of col indices (parallel to TASKS), or null if not found.
+function detectMilestoneCols(rows) {
+  const names = TASKS.map(t => t.name);
+  for (let r = 0; r < Math.min(4, rows.length); r++) {
+    const row = rows[r];
+    const map = {};
+    row.forEach((h, i) => { if (h && h.trim()) map[h.trim()] = i; });
+    const hits = names.filter(n => map[n] !== undefined).length;
+    if (hits >= Math.ceil(names.length * 0.7)) {
+      return names.map(n => (map[n] !== undefined ? map[n] : null));
+    }
+  }
+  return null;
+}
 
 function parseProjects(rows) {
+const rawCols = detectMilestoneCols(rows);
+// Build final col array: prefer detected index; fall back to hardcoded; null → skip
+const milestoneCols = TASKS.map((_, idx) => {
+  const detected = rawCols ? rawCols[idx] : null;
+  if (detected !== null && detected !== undefined) return detected;
+  if (rawCols) console.warn(`⚠️ עמודה לא נמצאה לפי כותרת: "${TASKS[idx].name}" — משתמש ב-fallback`);
+  return MILESTONE_COLS_FALLBACK[idx];
+});
+
 const projects = [];
 for (let i = 0; i < rows.length; i++) {
 const row = rows[i];
@@ -523,7 +546,7 @@ const units = parseInt(row[4]) || 0;
 const type = row[5]?.trim() || '';
 if (!name) continue;
 const milestones = TASKS.map((t, idx) => {
-const raw = (row[MILESTONE_COLS[idx]] || '').trim();
+const raw = (row[milestoneCols[idx]] || '').trim();
 const parsed = parseDate(raw);
 return { ...t, raw, parsed, status: dateStatus(parsed) };
 });
