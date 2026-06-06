@@ -354,8 +354,9 @@ transition: background 0.15s;
 </div>
 
 <script>
-const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/18VS0TyOSs-QduatiRR8P0msRGc8FyLfY/gviz/tq?tqx=out:csv&gid=347543099";
-const APPS_SCRIPT_URL = localStorage.getItem('apps_script_url') || '';
+const SHEET_CSV_URL   = "https://docs.google.com/spreadsheets/d/18VS0TyOSs-QduatiRR8P0msRGc8FyLfY/gviz/tq?tqx=out:csv&gid=347543099";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH6jn0HTwQo5dy7f2BJvJlugk1wjcGvRBx1wQvRnVeu8sPF7P3tSdWFmFhOTZ6xKCOlw/exec";
+localStorage.setItem('apps_script_url', APPS_SCRIPT_URL);
 
 function normalizeSheetUrl(raw) {
   // Accept any Google Sheets URL and convert to gviz/tq CSV endpoint
