@@ -354,9 +354,8 @@ transition: background 0.15s;
 </div>
 
 <script>
-// gviz/tq endpoint — CORS-safe, works for any publicly shared sheet without "Publish to web"
-// Sheet ID: 18VS0TyOSs-QduatiRR8P0msRGc8FyLfY | Tab gid: 347543099
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/18VS0TyOSs-QduatiRR8P0msRGc8FyLfY/gviz/tq?tqx=out:csv&gid=347543099";
+const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/18VS0TyOSs-QduatiRR8P0msRGc8FyLfY/gviz/tq?tqx=out:csv&gid=347543099";
+const APPS_SCRIPT_URL = localStorage.getItem('apps_script_url') || '';
 
 function normalizeSheetUrl(raw) {
   // Accept any Google Sheets URL and convert to gviz/tq CSV endpoint
@@ -509,11 +508,23 @@ try {
 }
 
 async function loadData(force = false) {
-let url = SHEET_CSV_URL || localStorage.getItem('sheet_url');
-if (!url) { document.getElementById('config-modal').classList.add('open'); return; }
-if (force) { url = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); }
-document.getElementById('main-content').innerHTML = `<div class="loading"><div class="spinner"></div><div>טוען נתונים מ-Google Sheets...</div></div>`;
+const appsUrl = localStorage.getItem('apps_script_url');
+document.getElementById('main-content').innerHTML = `<div class="loading"><div class="spinner"></div><div>טוען נתונים...</div></div>`;
 try {
+// Try Apps Script API first (fresh data, no cache)
+if (appsUrl) {
+  const res = await fetch(appsUrl + (force ? '?_t=' + Date.now() : ''));
+  if (res.ok) {
+    const json = await res.json();
+    PROJECTS = parseProjects(json.rows);
+    document.getElementById('data-source').innerHTML = `עודכן: ${new Date(json.ts).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})} · Apps Script`;
+    if (PROJECTS.length === 0) throw new Error('לא נמצאו פרויקטים');
+    renderAll(); return;
+  }
+}
+// Fallback: gviz CSV
+let url = SHEET_CSV_URL;
+if (force) url += '&_t=' + Date.now();
 const res = await fetch(url);
 if (res.status === 401 || res.status === 403) {
 throw new Error('הגיליון לא נגיש. יש לשתף אותו: "שתף" → "כל מי שיש לו קישור" → "צופה"');
@@ -521,7 +532,7 @@ throw new Error('הגיליון לא נגיש. יש לשתף אותו: "שתף" 
 if (!res.ok) throw new Error('HTTP ' + res.status);
 const text = await res.text();
 if (text.trim().startsWith('<!')) {
-throw new Error('הגיליון לא נגיש ציבורית. יש לשתף: לחץ "שתף" → "כל מי שיש לו קישור" → "צופה", ואז לרענן');
+throw new Error('הגיליון לא נגיש ציבורית.');
 }
 const rows = parseCSV(text);
 PROJECTS = parseProjects(rows);
