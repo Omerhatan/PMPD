@@ -570,13 +570,14 @@ const projects = [];
 for (let i = 0; i < rows.length; i++) {
 const row = rows[i];
 if (!row || row.length < 10) continue;
+if (!row || row.length < 3) continue;
 const id = parseInt(row[1]);
 if (isNaN(id)) continue;
 const name = row[2]?.trim() || '';
+if (!name) continue;
 const architect = row[3]?.trim() || '';
 const units = parseInt(row[4]) || 0;
 const type = row[5]?.trim() || '';
-if (!name) continue;
 const milestones = TASKS.map((t, idx) => {
 const raw = (row[milestoneCols[idx]] || '').trim();
 const parsed = parseDate(raw);
