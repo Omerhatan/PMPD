@@ -57,12 +57,16 @@ color: #fff; font-weight: 700; font-size: 16px;
 .header-right { display: flex; align-items: center; gap: 16px; }
 .today-badge { display: flex; align-items: center; gap: 8px; }
 .today-badge .date { font-size: 14px; color: var(--text-dim); }
-.refresh-btn {
-background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
-padding: 7px 14px; border-radius: 8px; cursor: pointer; font-family: inherit;
-font-size: 13px; font-weight: 700; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+.sync-btn {
+background: var(--primary); color: #fff; border: none;
+padding: 8px 18px; border-radius: 8px; cursor: pointer; font-family: inherit;
+font-size: 13px; font-weight: 700; transition: background 0.15s;
+display: flex; align-items: center; gap: 7px;
 }
-.refresh-btn:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.sync-btn:hover  { background: #0060C2; }
+.sync-btn.loading { background: #6B6F8C; cursor: default; }
+.sync-btn.success { background: var(--success); }
+#sync-status { font-size: 11px; color: var(--success); font-weight: 700; min-width: 90px; }
 .data-source { font-size: 11px; color: var(--text-faint); }
 
 /* ── Layout ── */
@@ -300,7 +304,11 @@ transition: background 0.15s;
 <div class="date" id="today-date"></div>
 </div>
 <div class="data-source" id="data-source"></div>
-<button class="refresh-btn" onclick="loadData(true)">↻ רענן</button>
+<button class="sync-btn" id="sync-btn" onclick="syncData()">
+  <span id="sync-icon">↻</span>
+  <span id="sync-label">עדכן אפליקציה</span>
+</button>
+<div id="sync-status"></div>
 </div>
 </header>
 
@@ -474,6 +482,30 @@ if (diffMonths < 0) return 'overdue';
 if (diffMonths === 0) return 'this-month';
 if (diffMonths <= 2) return 'upcoming';
 return 'future';
+}
+
+async function syncData() {
+const btn    = document.getElementById('sync-btn');
+const icon   = document.getElementById('sync-icon');
+const label  = document.getElementById('sync-label');
+const status = document.getElementById('sync-status');
+btn.classList.add('loading'); btn.disabled = true;
+icon.textContent = '⏳'; label.textContent = 'מעדכן...'; status.textContent = '';
+try {
+  await loadData(true);
+  btn.classList.remove('loading'); btn.classList.add('success');
+  icon.textContent = '✓'; label.textContent = 'עודכן!';
+  const t = new Date();
+  status.textContent = `עודכן ${t.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}`;
+  setTimeout(() => {
+    btn.classList.remove('success'); btn.disabled = false;
+    icon.textContent = '↻'; label.textContent = 'עדכן אפליקציה';
+  }, 3000);
+} catch {
+  btn.classList.remove('loading'); btn.disabled = false;
+  icon.textContent = '↻'; label.textContent = 'עדכן אפליקציה';
+  status.textContent = '⚠️ שגיאה בטעינה';
+}
 }
 
 async function loadData(force = false) {
